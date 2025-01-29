@@ -1,35 +1,42 @@
 import cv2
+import mediapipe as mp
 
-# Load the pre-trained Haar Cascade for hand detection (make sure you have the XML file)
-hand_cascade = cv2.CascadeClassifier("D:/ALMS-AI/image_taker/hand.xml")  # Replace with your cascade file
+# Initialize MediaPipe Hands and drawing utilities
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
 
 # Initialize webcam
 cap = cv2.VideoCapture(0)
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
+with mp_hands.Hands(
+    static_image_mode=False,  # For video input
+    max_num_hands=2,         # Detect up to 2 hands
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5) as hands:
 
-    # Convert the frame to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    # Detect hands in the grayscale image
-    hands = hand_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        # Flip the frame horizontally for a mirror effect
+        frame = cv2.flip(frame, 1)
+        # Convert BGR image to RGB
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    if len(hands) > 0:
-        print(f"Number of hands detected: {len(hands)}")
+        # Process the frame for hand landmarks
+        result = hands.process(rgb_frame)
 
-    # Draw rectangles around the detected hands
-    for (x, y, w, h) in hands:
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        # Draw landmarks and connections
+        if result.multi_hand_landmarks:
+            print("Hand detected")
 
-    # Display the frame
-    cv2.imshow('Hand Detection', frame)
+        else:
+            print("No hand detected")
 
-    # Break the loop on 'q' key press
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        # Break loop on 'q' key press
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 cap.release()
-cv2.destroyAllWindows()
+
